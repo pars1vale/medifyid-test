@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Kategori;
 use App\Models\MasterItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -56,14 +57,18 @@ class MasterItemsController extends Controller
     {
         if ($method == 'new') {
             $item = [];
+            $selectedKategoriIds = [];
         } else {
             $item = MasterItem::find($id);
             if (! $item) {
                 abort(404, 'Master item tidak ditemukan.');
             }
+            $selectedKategoriIds = $item->kategoris->pluck('id')->toArray();
         }
         $data['item'] = $item;
         $data['method'] = $method;
+        $data['kategoris'] = Kategori::orderBy('nama')->get();
+        $data['selectedKategoriIds'] = $selectedKategoriIds;
 
         return view('master_items.form.index', $data);
     }
@@ -96,6 +101,9 @@ class MasterItemsController extends Controller
         DB::transaction(function () use ($request, $method, $id) {
             if ($method == 'new') {
                 $data_item = new MasterItem;
+                // lock table row-set to prevent two concurrent creates from
+                // generating the same kode (also considers soft-deleted rows
+                // so a deleted item's kode is never reused)
                 $lastKode = MasterItem::withTrashed()->lockForUpdate()->max('kode');
                 $nextNumber = $lastKode ? ((int) $lastKode + 1) : 1;
                 $kode = str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
@@ -123,6 +131,8 @@ class MasterItemsController extends Controller
             }
 
             $data_item->save();
+
+            $data_item->kategoris()->sync($request->input('kategori_ids', []));
         });
 
         return redirect('master-items');

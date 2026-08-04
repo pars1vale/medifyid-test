@@ -32,7 +32,7 @@
       <option @if ($selected == 'Bukulapuk') selected @endif>Bukulapuk</option>
       <option @if ($selected == 'TokoBagas') selected @endif>TokoBagas</option>
       <option @if ($selected == 'E Commurz') selected @endif>E Commurz</option>
-      <optio @if ($selected == 'Blublu') selected @endif>Blublu</option>
+      <option @if ($selected == 'Blublu') selected @endif>Blublu</option>
     </select>
   </div>
 
@@ -44,9 +44,26 @@
       <option @if ($selected == 'Obat') selected @endif>Obat</option>
       <option @if ($selected == 'Alkes') selected @endif>Alkes</option>
       <option @if ($selected == 'Matkes') selected @endif>Matkes</option>
-      <optio @if ($selected == 'Umum') selected @endif>Umum</option>
-        <optio @if ($selected == 'ATK') selected @endif>ATK</option>
+      <option @if ($selected == 'Umum') selected @endif>Umum</option>
+      <option @if ($selected == 'ATK') selected @endif>ATK</option>
     </select>
+  </div>
+
+  <div class="form-group">
+    <label>Kategori</label>
+    <div>
+      @forelse ($kategoris as $kategori)
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="kategori_ids[]" value="{{ $kategori->id }}" id="kategori-{{ $kategori->id }}"
+            @if (in_array($kategori->id, $selectedKategoriIds)) checked @endif>
+          <label class="form-check-label" for="kategori-{{ $kategori->id }}">
+            {{ $kategori->nama }} ({{ $kategori->kode }})
+          </label>
+        </div>
+      @empty
+        <p class="text-muted">Belum ada kategori. <a href="{{ url('kategori/form/new') }}" target="_blank">Buat kategori baru</a>.</p>
+      @endforelse
+    </div>
   </div>
 
   <div class="form-group">

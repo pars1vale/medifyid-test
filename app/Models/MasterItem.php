@@ -16,4 +16,9 @@ class MasterItem extends Model
     {
         return $this->foto ? Storage::disk('public')->url($this->foto) : null;
     }
+
+    public function kategoris()
+    {
+        return $this->belongsToMany(Kategori::class, 'item_kategori', 'master_item_id', 'kategori_id');
+    }
 }
