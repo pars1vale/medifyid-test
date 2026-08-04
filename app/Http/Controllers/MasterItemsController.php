@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\MasterItemsExport;
 use App\Models\Kategori;
 use App\Models\MasterItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class MasterItemsController extends Controller
 {
@@ -150,6 +152,12 @@ class MasterItemsController extends Controller
         $data_item->delete();
 
         return redirect('master-items');
+    }
+
+    // download seluruh data master item dalam bentuk file excel (.xlsx)
+    public function exportExcel()
+    {
+        return Excel::download(new MasterItemsExport, 'master-items-'.now()->format('Ymd_His').'.xlsx');
     }
 
     public function updateRandomData()
