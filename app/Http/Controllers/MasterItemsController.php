@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MasterItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class MasterItemsController extends Controller
@@ -30,7 +31,10 @@ class MasterItemsController extends Controller
             $data_search = $data_search->where('nama', 'LIKE', '%'.$nama.'%');
         }
         if (! empty($hargamin)) {
-            $data_search = $data_search->where('harga_beli', '>=', $hargamin)->where('harga_beli', '<=', $hargamax);
+            $data_search = $data_search->where('harga_beli', '>=', $hargamin);
+        }
+        if (! empty($hargamax)) {
+            $data_search = $data_search->where('harga_beli', '<=', $hargamax);
         }
 
         $data_search = $data_search->select('id', 'kode', 'nama', 'jenis', 'harga_beli', 'laba', 'supplier', 'foto')->orderBy('id')->get();
@@ -54,6 +58,9 @@ class MasterItemsController extends Controller
             $item = [];
         } else {
             $item = MasterItem::find($id);
+            if (! $item) {
+                abort(404, 'Master item tidak ditemukan.');
+            }
         }
         $data['item'] = $item;
         $data['method'] = $method;
@@ -65,6 +72,9 @@ class MasterItemsController extends Controller
     public function singleView($kode)
     {
         $data['data'] = MasterItem::where('kode', $kode)->first();
+        if (! $data['data']) {
+            abort(404, 'Master item tidak ditemukan.');
+        }
 
         return view('master_items.single.index', $data);
     }
@@ -83,33 +93,37 @@ class MasterItemsController extends Controller
             'foto' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
-        if ($method == 'new') {
-            $data_item = new MasterItem;
-            $kode = MasterItem::count('id');
-            $kode = $kode + 1;
-            $kode = str_pad($kode, 5, '0', STR_PAD_LEFT);
-            sleep(3);
-        } else {
-            $data_item = MasterItem::find($id);
-            $kode = $data_item->kode;
-        }
-
-        $data_item->nama = $request->nama;
-        $data_item->harga_beli = $request->harga_beli;
-        $data_item->laba = $request->laba;
-        $data_item->kode = $kode;
-        $data_item->supplier = $request->supplier;
-        $data_item->jenis = $request->jenis;
-
-        // kalo user upload foto baru, hapus foto lama (kalo ada) baru simpan yang baru
-        if ($request->hasFile('foto')) {
-            if (! empty($data_item->foto)) {
-                Storage::disk('public')->delete($data_item->foto);
+        DB::transaction(function () use ($request, $method, $id) {
+            if ($method == 'new') {
+                $data_item = new MasterItem;
+                $lastKode = MasterItem::withTrashed()->lockForUpdate()->max('kode');
+                $nextNumber = $lastKode ? ((int) $lastKode + 1) : 1;
+                $kode = str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+            } else {
+                $data_item = MasterItem::lockForUpdate()->find($id);
+                if (! $data_item) {
+                    abort(404, 'Master item tidak ditemukan.');
+                }
+                $kode = $data_item->kode;
             }
-            $data_item->foto = $request->file('foto')->store('master_items', 'public');
-        }
 
-        $data_item->save();
+            $data_item->nama = $request->nama;
+            $data_item->harga_beli = $request->harga_beli;
+            $data_item->laba = $request->laba;
+            $data_item->kode = $kode;
+            $data_item->supplier = $request->supplier;
+            $data_item->jenis = $request->jenis;
+
+            // kalo user upload foto baru, hapus foto lama (kalo ada) baru simpan yang baru
+            if ($request->hasFile('foto')) {
+                if (! empty($data_item->foto)) {
+                    Storage::disk('public')->delete($data_item->foto);
+                }
+                $data_item->foto = $request->file('foto')->store('master_items', 'public');
+            }
+
+            $data_item->save();
+        });
 
         return redirect('master-items');
     }
@@ -117,6 +131,12 @@ class MasterItemsController extends Controller
     public function delete($id)
     {
         $data_item = MasterItem::find($id);
+        if (! $data_item) {
+            abort(404, 'Master item tidak ditemukan.');
+        }
+        if (! empty($data_item->foto)) {
+            Storage::disk('public')->delete($data_item->foto);
+        }
         $data_item->delete();
 
         return redirect('master-items');
