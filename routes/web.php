@@ -37,4 +37,5 @@ Route::get('/kategori/search', [KategoriController::class, 'search']);
 Route::get('/kategori/form/{method}/{id?}', [KategoriController::class, 'formView']);
 Route::post('/kategori/form/{method}/{id?}', [KategoriController::class, 'formSubmit']);
 Route::get('/kategori/view/{kode}', [KategoriController::class, 'singleView']);
+Route::get('/kategori/print/{kode}', [KategoriController::class, 'printPdf']);
 Route::get('/kategori/delete/{id}', [KategoriController::class, 'delete']);

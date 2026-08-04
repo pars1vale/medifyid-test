@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Kategori;
+use Barryvdh\DomPDF\Facade\Pdf; // ASUMSI: package barryvdh/laravel-dompdf, alias facade default
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -62,6 +63,21 @@ class KategoriController extends Controller
         }
 
         return view('kategori.single.index', $data);
+    }
+
+    // generate dan download PDF detail kategori + daftar item yang memakainya
+    public function printPdf($kode)
+    {
+        $data['data'] = Kategori::where('kode', $kode)->with('masterItems')->first();
+        if (! $data['data']) {
+            abort(404, 'Kategori tidak ditemukan.');
+        }
+        $data['printedAt'] = now();
+
+        $pdf = Pdf::loadView('kategori.single.print', $data);
+        $pdf->setPaper('a4', 'portrait');
+
+        return $pdf->download('kategori-'.$data['data']->kode.'.pdf');
     }
 
     public function formSubmit(Request $request, $method, $id = 0)
